@@ -1,0 +1,399 @@
+create table CONTINENT(
+cod_continent number(4) constraint pkey_cont primary key,
+denumire varchar2(20) constraint nume_cont not null,
+constraint den_unic unique(denumire)
+);
+create table REGIUNE(
+id_regiune number(4) constraint pkey_id_reg primary key,
+nume_regiune varchar2(20) constraint nume_reg not null,
+importanta_regiune number(4) constraint pkey_imp not null,
+constraint n_reg unique(nume_regiune)
+);
+alter table REGIUNE
+add (cod_continent number(4) not null);
+desc regiune;
+alter table REGIUNE
+add constraint fk_reg foreign key(cod_continent) REFERENCES CONTINENT(cod_continent);
+create table TARA(
+id_tara number(4) constraint pkey_tara primary key,
+nume_tara varchar2(20) constraint nume_tara not null,
+id_regiune number(4) constraint id_reg_n not null,
+constraint n_t unique(nume_tara),
+constraint fk_tara foreign key(id_regiune)references REGIUNE(id_regiune)
+);
+create table LOCATIE(
+id_locatie number(4) constraint pkey_loc primary key,
+oras varchar2(20) not null,
+id_tara number(4) not null,
+cod_postal number(8),
+constraint fk_locatie foreign key(id_tara)references TARA(id_tara)
+);
+create table FURNIZOR(
+id_furnizor number(6) constraint pkey_furn primary key,
+id_locatie number(4) constraint fkey_f not null,
+nume_furnizor varchar(20) unique,--numele furnizorului poate fi necunoscut
+constraint fk_furnizor foreign key(id_locatie) references LOCATIE(id_locatie)
+);
+create table DOMENIU(
+cod_domeniu number(6) constraint pkey_dd primary key,
+popularitate number(4) not null
+);
+create table ALIANTA(
+cod_alianta number(6) constraint pkey_al primary key,
+cod_domeniu(6) not null
+constraint fk_alian foreign key(cod_domeniu) references domeniu(cod_domeniu)
+);
+create table FIRMA(
+id_firma number(6) constraint pk_firma primary key,
+cod_alianta number(6) constraint firma_al not null,
+data_infiintare date default sysdate,
+nume_fondator varchar2(20) default 'UNKNOWN',
+constraint fk_firma foreign key(cod_alianta) references alianta(cod_alianta)
+);
+create table ACT_CARITATE(
+id_act number(4) constraint pk_act primary key,
+bani_donati number(10,2) not null,
+id_firma number(6),--poate avea null daca sunt donatii anononime din partea firmelor
+constraint fk_caritate foreign key(id_firma) references firma(id_firma)
+);
+create table ANGAJAT(
+cod_angajat number(6) constraint pkk_angaj primary key,
+last_name varchar2(15) not null,
+first_name varchar2(15) not null,
+data_angajare date,
+comision number(4,2)
+);
+create table oferta(
+suma number(12,2) constraint pk_oferta primary key,
+tip_livrare varchar2(20) default 'UNKNOWN'
+);
+create table vinde(
+suma number(12,2) not null,
+cod_angajat number(6) not null,
+id_furnizor number(6) not null,
+constraint fk_vinde_s foreign key(suma) references oferta(suma),
+constraint fk_vinde_c foreign key(cod_angajat) references angajat(cod_angajat),
+constraint fk_vinde_i foreign key(id_furnizor) references furnizor(id_furnizor)
+);
+alter table vinde
+add (data_v date);
+alter table angajat
+add(id_firma number(6) not null);
+ALTER TABLE ANGAJAT
+ADD CONSTRAINT fork_ang_firma FOREIGN KEY (id_firma) references FIRMA(id_firma);
+--------INSERARE
+create sequence secv
+INCREMENT by 1
+START WITH 0
+MAXVALUE 100
+NOCYCLE;
+create sequence coddd_conttt
+increment by 100
+start with 100
+maxvalue 1000
+nocycle;
+create sequence iddd_taraaa
+increment by 10
+start with 10
+maxvalue 1000
+nocycle;
+---------------------------------------------------------------------------------------------------
+desc continent;
+insert into CONTINENT
+values(coddd_conttt.NEXTVAL,'Europa');
+insert into CONTINENT
+values(coddd_conttt.NEXTVAL,'Asia');
+insert into CONTINENT
+values(coddd_conttt.NEXTVAL,'America de Nord');
+insert into CONTINENT
+values(coddd_conttt.NEXTVAL,'Africa');
+insert into CONTINENT
+values(coddd_conttt.NEXTVAL,'America de Sud');
+select *from continent;
+--------------------------------------------------------------------------------------
+desc regiune;
+insert into regiune
+values(secv.nextval, 'Africa de Nord', 4, 500);
+select *from regiune;
+insert into regiune
+values(1, 'Europa de Vest', 9, 200);
+insert into regiune
+values(secv.nextval, 'Caraibe', 2, 400);
+insert into regiune
+values(secv.nextval, 'Asia de Sud', 6, 300);
+insert into regiune
+values(secv.nextval, 'Asia de Est', 9, 300);
+insert into regiune
+values(secv.nextval, 'Europa Centrala', 7, 200);
+insert into regiune
+values(secv.nextval, 'America de Nord', 10, 400);
+---------------------------------------------------------------------------------------
+desc tara;
+select *from tara;
+insert into tara
+values(iddd_taraaa.nextval, 'Germania', 1);
+insert into tara
+values(10, 'Cehia', 6);
+insert into tara
+values(iddd_taraaa.nextval, 'Jamaica', 3);
+insert into tara
+values(iddd_taraaa.nextval, 'China', 5);
+insert into tara
+values(iddd_taraaa.nextval, 'India', 4);
+insert into tara
+values(iddd_taraaa.nextval, 'Franta', 1);
+insert into tara
+values(iddd_taraaa.nextval, 'Algeria', 2);
+insert into tara
+values(iddd_taraaa.nextval, 'Libia', 2);
+insert into tara
+values(iddd_taraaa.nextval, 'SUA', 7);
+insert into tara
+values(iddd_taraaa.nextval, 'Romania', 6);
+insert into tara
+values(iddd_taraaa.nextval, 'Japonia', 5);
+insert into tara
+values(iddd_taraaa.nextval, 'Luxemburg', 1);
+------------------------------------------------------------------------------------
+desc locatie;
+select *from locatie;
+insert into locatie(id_locatie,oras,id_tara)
+values(25, 'Beijing', 40);
+insert into locatie
+values(50, 'Berlin', 20, 123456);
+insert into locatie
+values(75, 'Kingston', 30, 420420);
+insert into locatie
+values(100, 'Chennai', 50, 200100);
+insert into locatie
+values(125, 'Los Angeles', 100, 432123);
+insert into locatie(id_locatie, oras, id_tara)
+values(150, 'Oran', 70);
+insert into locatie(id_locatie, oras, id_tara)
+values(175, 'Tokyo', 120);
+insert into locatie(id_locatie, oras, id_tara)
+values(200, 'Mlada Boleslav', 10);
+insert into locatie
+values(999, 'Brasov', 110, 500408);
+insert into locatie
+values(250, 'Stuttgart', 20, 123444);
+insert into locatie(id_locatie,oras,id_tara)
+values(275, 'Shenzen', 40);
+insert into locatie
+values(300, 'Ettelbruck', 130, 200200);
+insert into locatie
+values(325, 'Alger', 70, 122221);
+insert into locatie
+values(400, 'Bucuresti', 110, 021301);
+------------------------------------------------------------------------
+insert into furnizor
+values(1, 999, 'RomTech');
+create sequence idd_furnizor
+increment by 2
+start with 3
+maxvalue 1000
+nocycle;
+insert into furnizor
+values(idd_furnizor.nextval, 150,'Lah-Ahmid SRL');
+insert into furnizor
+values(idd_furnizor.nextval, 50,'GufenHaus');
+insert into furnizor(id_furnizor,id_locatie)
+values(idd_furnizor.nextval, 25);
+insert into furnizor(id_furnizor,id_locatie)
+values(idd_furnizor.nextval, 325);
+insert into furnizor
+values(idd_furnizor.nextval, 400,'Werder-Kopfhorer');
+insert into furnizor
+values(idd_furnizor.nextval, 175,'Aka Enpitsu');
+insert into furnizor
+values(idd_furnizor.nextval, 300,'Le Nain Dansant');
+insert into furnizor
+values(idd_furnizor.nextval, 175,'Zui Hao');
+insert into furnizor
+values(idd_furnizor.nextval, 125,'Madman Trevor Pie');
+insert into furnizor
+values(idd_furnizor.nextval, 150,'Badr Electronics');
+insert into furnizor
+values(idd_furnizor.nextval, 400,'Fratii MG');
+insert into furnizor
+values(idd_furnizor.nextval, 75,'Rasta Joy');
+select*from furnizor;
+-----------------------------------------------------------------------------------------------
+desc domeniu;
+select *from domeniu;
+insert into domeniu
+values(150, 8);
+insert into domeniu
+values(300, 3);
+insert into domeniu
+values(450, 6);
+insert into domeniu
+values(600, 7);
+insert into domeniu
+values(750,2);
+insert into domeniu
+values(1000,10);
+insert into domeniu
+values(1150,9);
+---------------------------------------------------------------------------------------------------
+insert into alianta
+values(1,600);
+insert into alianta
+values(2,300);
+insert into alianta
+values(3,600);
+insert into alianta
+values(4,150);
+insert into alianta
+values(7,300);
+insert into alianta
+values(6,450);
+select *from alianta;
+--------------------------------------------------------------------------------------------
+desc angajat;
+select *from angajat;
+create sequence coddd_angajatt
+increment by 100
+start with 100
+maxvalue 10000
+nocycle;
+insert into angajat
+values(coddd_angajatt.nextval, 'Villa', 'Jessie', to_date('12-01-1995'), 0.3, 'Agent', 400);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Church', 'Michael','Specialist', 510);
+insert into angajat(cod_angajat,last_name,first_name,data_angajare,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Kepa', 'Ahmed', to_date('12-10-2002'), 'Specialist', 500);
+insert into angajat(cod_angajat,last_name,first_name,data_angajare,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Ming', 'Eiko', to_date('23-11-2005'), 'Specialist', 100);
+insert into angajat
+values(coddd_angajatt.nextval, 'Kahn', 'Samir', to_date('17-03-2019'), 0.15, 'Agent', 510);
+insert into angajat
+values(coddd_angajatt.nextval, 'Mandini', 'Paola', to_date('22-05-2020'), 0.05, 'Agent', 350);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Sacic', 'Ocktavian', 'Specialist', 150);
+insert into angajat
+values(coddd_angajatt.nextval, 'Karpinarian', 'Dan', to_date('02-10-1999'), 0.35, 'Agent', 400);
+insert into angajat
+values(coddd_angajatt.nextval, 'Gibberson', 'Lance', to_date('12-12-1991'), 0.3, 'Agent', 50);
+insert into angajat(cod_angajat,last_name,first_name,data_angajare,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Li', 'Wok Han', to_date('19-06-1984'), 'Specialist', 50);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Cristescu', 'Adrian', 'Specialist', 680);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Smith', 'Buddy', 'Specialist', 150);
+insert into angajat(cod_angajat,last_name,first_name,comision,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Hollande', 'Armand',0.33, 'Agent', 150);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Dahoty', 'Rebeca', 'Specialist', 50);
+insert into angajat
+values(coddd_angajatt.nextval, 'Dos Santos', 'Eric', to_date('08-07-1979'), 0.31, 'Agent', 50);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Akoshua', 'Abena', 'Specialist', 400);
+insert into angajat
+values(coddd_angajatt.nextval, 'Mendy', 'Ekon', to_date('01-02-1984'), 0.1, 'Agent', 250);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Toure', 'Abdoulaye','Specialist', 150);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Roberts', 'Alice', 'Specialist', 200);
+insert into angajat
+values(coddd_angajatt.nextval, 'Adam', 'Eliska', to_date('24-04-1993'), 0.1, 'Agent', 250);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Campbell', 'Aaron', 'Specialist', 350);
+insert into angajat(cod_angajat,last_name,first_name,profesie, id_firma)
+values(coddd_angajatt.nextval, 'Draganescu', 'Daniel', 'Specialist', 500);
+insert into angajat
+values(coddd_angajatt.nextval, 'Dvorak', 'Jindrich', to_date('07-09-1988'), 0.13, 'Agent', 250);
+insert into angajat
+values(coddd_angajatt.nextval, 'Rodriguez', 'Feranda', to_date('12-01-2016'), 0.6, 'Agent', 50);
+----------------------------------------------------------------------------------------------------
+desc firma;
+select *from firma;
+insert into firma
+values(50, 4, to_date('02-10-1954','dd-mm-yy'),'Charles Berhshawn');
+insert into firma
+values(100, 2, to_date('26-03-1989','dd-mm-yy'), 'Yao Ming');
+insert into firma(id_firma, cod_alianta, data_infiintare)
+values(150, 2, to_date('13-01-1999','dd-mm-yy'));
+insert into firma(id_firma, cod_alianta, data_infiintare)
+values(200, 1, to_date('16-08-1993','dd-mm-yy'));
+insert into firma
+values(250, 4, to_date('17-12-1958','dd-mm-yy'),'Charles Berhshawn');
+insert into firma
+values(400, 4, to_date('30-10-1968','dd-mm-yy'),'Breonna Berhshawn');
+insert into firma
+values(350, 2, to_date('15-05-2018','dd-mm-yy'),'Jun Tao Liu');
+insert into firma
+values(320, 3, to_date('02-06-2003','dd-mm-yy'),'Siko Doncic');
+insert into firma
+values(500, 7, to_date('19-04-2009','dd-mm-yy'),'Robert Domnescu');
+insert into firma
+values(510, 6, to_date('14-03-2012','dd-mm-yy'),'Francois Lamerde');
+insert into firma
+values(680, 7, to_date('09-01-2006','dd-mm-yy'),'Andrei Stoica');
+-------------------------------------------------------------------------------------------------
+create sequence coddd_act
+increment by 1
+start with 1
+maxvalue 100
+nocycle;
+select *from act_caritate;
+desc act_caritate;
+insert into act_caritate
+values(coddd_act.nextval, 10000, 680);
+insert into act_caritate
+values(coddd_act.nextval, 35600.50, 100);
+insert into act_caritate
+values(coddd_act.nextval, 1500000, 500);
+insert into act_caritate
+values(coddd_act.nextval, 1000.25, 510);
+insert into act_caritate
+values(coddd_act.nextval, 90000.22, 320);
+insert into act_caritate
+values(coddd_act.nextval, 351752, 50);
+insert into act_caritate
+values(coddd_act.nextval, 1251151, 320);
+insert into act_caritate(id_act, bani_donati)
+values(coddd_act.nextval, 21250.54);
+insert into act_caritate
+values(coddd_act.nextval, 4686795, 500);
+insert into act_caritate
+values(coddd_act.nextval, 918214, 400);
+-----------------------------------------------------------------------------------------------------------------
+desc oferta;
+SELECT*FROM OFERTA;
+insert into oferta
+values(192419.25,'EXPRESS');
+INSERT INTO OFERTA
+VALUES(9539101, 'EXPRESS');
+INSERT INTO OFERTA
+VALUES(10000, 'CU INTARZIERE');
+INSERT INTO OFERTA
+VALUES(10000000,'LIVRARE 3 ZILE');
+INSERT INTO OFERTA
+VALUES(401000, 'CU INTARZIERE');
+INSERT INTO OFERTA
+VALUES(5161000, 'EXPRESS');
+INSERT INTO OFERTA
+VALUES(20000, 'NESPECIFICAT');
+INSERT INTO OFERTA
+VALUES(3100, 'CU INTARZIERE');
+INSERT INTO OFERTA
+VALUES(5160, 'NEGOCIERE');
+INSERT INTO OFERTA
+VALUES(1022000, 'NEGOCIERE');
+INSERT INTO OFERTA
+VALUES(3100.50, 'CU INTARZIERE');
+------------------------------------------------------------------------------------------------------------------------
+DESC VINDE;
+select *from vinde;
+alter table vinde
+add constraint pk_compus_vinde primary key(suma, cod_angajat, id_furnizor);
+insert into vinde
+values(9539101, 200, 1, TO_DATE('12-03-2001'));
+insert into vinde
+values(10000, 700, 3, TO_DATE('16-09-2020'));
+insert into vinde
+values(401000, 1000, 7, TO_DATE('17-06-2008'));
+insert into vinde
+values(10000000, 1600, 1, TO_DATE('12-03-2011'));
+insert into vinde

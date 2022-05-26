@@ -1,0 +1,309 @@
+then raise_application_error(-20001, 'NU SE POATE MODIFICA IN ACEST INTERVAL
+ORAR(INTERVALUL PERMIS ESTE 06:00 - 23.59)');
+end if;
+end;
+/
+11.
+--ex11
+--nu permite updatarea datei de angajare, cu exceptia cazurilor in care data angajare nu este cunoscuta
+create or replace trigger trigg11_dav
+before update of data_angajare on ang
+for each row
+begin
+if (:NEW.data_angajare <> :OLD.data_angajare) then
+raise_application_error(-20001, 'Data angajare nu poate fi modificata');
+end if;
+end;
+12.
+--se retin modificarile facute asupra bazei de date in tabelul istoric_comenzi
+--ex12
+create table istoric_comenzi(
+baza_date varchar2(20),
+data_operatiune date,
+nume_user varchar2(30),
+actiune varchar2(20)
+);
+drop table istoric_comenzi;
+create or replace trigger trigg12_dav
+before create or drop or alter on schema
+begin
+insert into istoric_comenzi values(sys.database_name, sysdate, sys.login_user, sys.sysevent);
+end;
+/
+drop trigger trigg12_dav;
+create table ceva as select * from firma;
+drop table ceva;
+select * from istoric_comenzi;
+13.(contine cerintele 6-9)
+create or replace package PROIECT_DAV
+as procedure p6_dav(
+cod_1 angajat.cod_angajat%type,
+cod_2 angajat.cod_angajat%type,
+cod_3 angajat.cod_angajat%type);
+function f7_dav return varchar2;
+function f8_dav(ida act_caritate.id_act%type) return number;
+procedure p9_dav(continentt continent.denumire%type);
+end PROIECT_DAV;
+/
+create or replace package body PROIECT_DAV
+as
+--ex6
+--transmite 3 coduri de angajati unei proceduri care:sa retina datele complete despre angajatii respectivi intr-o
+--colectie suplimentara, sa mareasca cu 0.1 comisionul angajatilor ce au comisionul mai mic de 0.2, respectiv
+--50% al celor avand comisionul <0.5(cei avand comision peste 0.5 nu vor avea comisionul modificat).
+procedure p6_dav(
+cod_1 angajat.cod_angajat%type,
+cod_2 angajat.cod_angajat%type,
+cod_3 angajat.cod_angajat%type)
+is
+TYPE tab_ind IS TABLE OF angajat%ROWTYPE INDEX BY BINARY_INTEGER;
+tab_i tab_ind;
+TYPE vector IS VARRAY(3) OF NUMBER;
+coduri vector := vector(cod_1, cod_2, cod_3);
+i number;
+begin
+select cod_angajat, last_name, first_name, data_angajare, comision, profesie, id_firma
+bulk collect into tab_i
+from angajat
+where cod_angajat = cod_1 or cod_angajat = cod_2 or cod_angajat = cod_3;
+FOR i IN 1..3 LOOP
+if tab_i(i).comision < 0.2 then
+tab_i(i).comision := tab_i(i).comision + 0.1;
+elsif tab_i(i).comision < 0.5 then
+tab_i(i).comision := tab_i(i).comision + tab_i(i).comision*0.5;
+elsif tab_i(i).comision is null then
+tab_i(i).comision := 0.1;
+else
+null;
+end if;
+DBMS_OUTPUT.PUT_LINE('Angajatul ' || tab_i(i).last_name || ' ' || tab_i(i).first_name || 'are acum
+comisionul 0' || tab_i(i).comision);
+END LOOP;
+exception
+when no_data_found then
+raise_application_error(-20000, 'Nu exista');
+WHEN TOO_MANY_ROWS THEN
+RAISE_APPLICATION_ERROR(-20001, 'Exista mai multi angajati cu numele dat');
+WHEN OTHERS THEN
+dbms_output.put_line('Alta Eroare');
+end p6_dav;
+--ex7 sa se returneze tara cu cele mai multe locatii(in caz de egalitate, se compara alfabetic). Sa se afiseze
+--corespunzator pt fiecare tara cate locatii are(in ordinea numarului de locatii, iar in caz de egalitate -> alfabetic)
+function f7_dav
+return VARCHAR2 is
+tara_finala tara.nume_tara%type;
+max_locatii number;
+v_tara tara.nume_tara%type;
+v_nr number;
+cursor c is
+select nume_tara n_tara, count(id_locatie) nr_loc
+from tara t, locatie l
+where t.id_tara = l.id_tara(+)
+group by nume_tara
+order by 2, 1;
+begin
+max_locatii := 0;
+open c;
+loop
+fetch c into v_tara, v_nr;
+exit when c%notfound;
+DBMS_OUTPUT.PUT_LINE(v_tara || ' si ' || v_nr);
+if v_nr > max_locatii then
+tara_finala := v_tara;
+max_locatii := v_nr;
+end if;
+end loop;
+return tara_finala;
+end;
+--ex8 Returneaza nr de angajati al unei firme care a facut actul de caritate transmis ca parametru si afiseaza
+--angajatii respectivi
+--exceptii:nu exista actul respectiv, donatia a fost anonima, donatia a fost a unei firme fara angajati, alte
+exceptii(intoarce -1)
+function f8_dav(ida act_caritate.id_act%type)
+return number is
+TYPE tbl IS TABLE OF angajat%ROWTYPE INDEX BY BINARY_INTEGER;
+tx tbl;
+nr number;
+gasit number := -1;
+i number;
+NO_ANG exception;
+NR_NEGASIT exception;
+ANONIM exception;
+begin
+select count(*)
+into gasit
+from act_caritate
+where id_act = ida;
+if gasit < 1 then
+RAISE NR_NEGASIT;
+end if;
+select id_firma
+into nr
+from act_caritate
+where id_act = ida;
+if nr is null then
+raise ANONIM;
+end if;
+select cod_angajat, last_name, first_name, data_angajare, comision, profesie, a.id_firma
+bulk collect into tx
+from angajat a, firma f, act_caritate c
+where c.id_act = ida and f.id_firma = c.id_firma and a.id_firma = f.id_firma;
+if tx.count < 1 then
+RAISE NO_ANG;
+end if;
+nr := tx.count;
+DBMS_OUTPUT.PUT_LINE('ANGAJATII SUNT:');
+FOR i IN 1..nr LOOP
+DBMS_OUTPUT.PUT_LINE(i || '.' || tx(i).last_name || ' ' || tx(i).first_name);
+END LOOP;
+return nr;
+exception
+when NR_NEGASIT then
+DBMS_OUTPUT.PUT_LINE('Eroare! Numarul actului de caritate e gresit!');
+return -1;
+when ANONIM then
+DBMS_OUTPUT.PUT_LINE('Eroare! Donatia a fost anonima!');
+return -1;
+when NO_ANG then
+DBMS_OUTPUT.PUT_LINE('Eroare! Firma nu are in prezent angajati!');
+return -1;
+when others then
+DBMS_OUTPUT.PUT_LINE('EROARE!');
+return -1;
+end;
+--ex9
+--afiseaza toti furnizorii(mai intai numarul lor) apartinand unui continent(afisarea este in ordine alfabetica)
+--transmis ca parametru, ii retine intr-un nou tabel si modifica in noul tabel id_locatie cu id-ul continentului
+--exceptii:continentul nu exista, nu exista firme pe continentul respectiv, alte exceptii
+procedure p9_dav(
+continentt continent.denumire%type)
+is
+TYPE tab_ind IS TABLE OF furnizor%ROWTYPE INDEX BY BINARY_INTEGER;
+tabel tab_ind;
+i number;
+validare number;
+idd_cont number;
+NO_CONTINENT exception;
+NO_FIRME exception;
+begin
+if continentt = 'America' then
+raise TOO_MANY_ROWS; --nu stie daca avem america de sud sau america de nord
+end if;
+select count(*)
+into validare
+from continent
+where denumire = continentt;
+if validare < 1 then
+raise NO_CONTINENT;
+end if;
+select count(*)
+into validare
+from furnizor f, continent c, regiune r, tara t, locatie l
+where f.id_locatie = l.id_locatie and l.id_tara = t.id_tara and t.id_regiune = r.id_regiune and
+r.cod_continent = c.cod_continent and denumire = continentt;
+if validare < 1 then
+raise NO_FIRME;
+end if;
+DBMS_OUTPUT.PUT_LINE('Pe continentul ' || continentt || ' sunt ' || validare || ' firme :');
+select f.id_furnizor, f.id_locatie, f.nume_furnizor
+bulk collect into tabel
+from furnizor f, continent c, regiune r, tara t, locatie l
+where f.id_locatie = l.id_locatie and l.id_tara = t.id_tara and t.id_regiune = r.id_regiune and
+r.cod_continent = c.cod_continent and denumire = continentt;
+select cod_continent
+into idd_cont
+from continent
+where denumire = continentt;
+FOR i IN 1..tabel.count LOOP
+tabel(i).id_locatie := idd_cont;
+DBMS_OUTPUT.PUT_LINE(tabel(i).id_furnizor || ' ' || tabel(i).id_locatie || ' ' ||
+nvl(tabel(i).nume_furnizor, 'NECUNOSCUT'));
+END LOOP;
+exception
+WHEN TOO_MANY_ROWS THEN
+DBMS_OUTPUT.PUT_LINE('Eroare! Continentul este specificat ambiguu!');
+WHEN NO_CONTINENT THEN
+DBMS_OUTPUT.PUT_LINE('Eroare! Acest continent nu este recunoscut!(ex. forma scriere
+continente: Europa, America de Sud etc)');
+WHEN NO_FIRME THEN
+DBMS_OUTPUT.PUT_LINE('Eroare! Nu exista firme pe continentul dat!');
+WHEN OTHERS THEN
+dbms_output.put_line('Alta Eroare');
+end p9_dav;
+end PROIECT_DAV;
+14.
+--se creeaza un pachet ce retine numele si data nasterii unor persoane prin intermediul a doua tablouri
+--imbricate(unul de tip date si celalat varchar). Prin intermediul pachetului putem afisa inregistrarile existente,
+--numarul lor, putem adauga intrari noi si de asemenea putem sa vedem cate zile sunt ramase pana la ziua de
+--nastere a unei persoane adaugate prin intemediul unei functii avand ca parametru numele acesteia.
+create or replace package date_nastere
+as
+procedure adauga(x date, y varchar2);
+procedure afiseaza;
+function until_next(x varchar2) return number;
+function intrari_adaugate return number;
+d_size number := 1;
+type tb_im is table of varchar2(30);
+numele tb_im;
+type tb_im_2 is table of date;
+zilele tb_im_2;
+end date_nastere;
+/
+create or replace package body date_nastere
+as
+procedure adauga(x date, y varchar2) as
+begin
+if d_size = 1 then
+zilele := tb_im_2();
+numele := tb_im();
+end if;
+zilele.extend(1);
+numele.extend(1);
+zilele(d_size) := x;
+numele(d_size) := y;
+d_size := d_size + 1;
+end;
+procedure afiseaza as
+CALENDAR_GOL exception;
+i number;
+begin
+if(d_size) = 1 then
+raise CALENDAR_GOL;
+end if;
+FOR i IN 1..d_size-1 LOOP
+dbms_output.put_line(numele(i) || ' ' || zilele(i));
+END LOOP;
+exception
+when CALENDAR_GOL then
+dbms_output.put_line('NU AVEM DATE INTRODUSE PENTRU A PUTEA AFISA CEVA!');
+end;
+function until_next(x varchar2) return number as
+pozitie number;
+nr_zile_ramase number;
+i number;
+var1 varchar2(30);
+var2 varchar2(30);
+begin
+FOR i IN 1..d_size-1 LOOP
+if numele(i) like x then
+pozitie := i;
+end if;
+END LOOP;
+var1 := substr(to_char(sysdate),0, 5);
+var2 := substr(to_char(zilele(pozitie)),0, 5);
+if var1 = var2 then
+nr_zile_ramase := 0;
+end if;
+if(sysdate > zilele(pozitie)) then
+nr_zile_ramase := floor(abs(sysdate - zilele(pozitie)));
+else
+nr_zile_ramase := floor(abs(sysdate - zilele(pozitie))) + 1;
+end if;
+return nr_zile_ramase;
+end;
+function intrari_adaugate return number as
+begin
+return (d_size-1);
+end;
+end date_nastere;
+/
